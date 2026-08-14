@@ -22,6 +22,10 @@ exactly one hosted zone and one apex redirect, shared by every environment of
   from, so this redirect doesn't depend on `www.mootmaker.com` (or anything
   else) actually being deployed and working.
 - A/AAAA alias records pointing `mootmaker.com` at that distribution.
+- **Written but not yet applied** (see "Real-email testing infrastructure"
+  below): an SES domain identity for `mail.mootmaker.com`, its DNS
+  verification/DKIM records, and an MX record pointing at SES's inbound
+  endpoint.
 
 ## Why not one shared wildcard certificate?
 
@@ -71,3 +75,24 @@ mootmaker-webapp find the zone via `data "aws_route53_zone" { name = "mootmaker.
 rather than reading these directly, so there's no cross-repo state coupling;
 the outputs exist mainly for visibility (`terraform output` after a deploy)
 and to get the nameserver values for your registrar.
+
+## Real-email testing infrastructure (`ses.tf`) - written but not applied
+
+`deploy/terraform/ses.tf` creates an SES domain identity for
+`mail.mootmaker.com` (verification TXT record, DKIM CNAMEs, and an MX record
+pointing at SES's regional inbound endpoint), the DNS half of the real-email
+testing pipeline described in
+[mootmaker/testing-strategy.md](https://github.com/geoffweatherall/mootmaker/blob/main/testing-strategy.md#reading-cognitos-emails-in-tests).
+The other half - the SES receipt rule, SNS topic, and SQS queue that
+actually consume the mail - lives in
+[mootmaker-e2e](https://github.com/geoffweatherall/mootmaker-e2e), which
+finds this identity via `data "aws_ses_domain_identity"` rather than reading
+any output from here, consistent with how mootmaker-api/mootmaker-webapp
+find this repo's hosted zone.
+
+**Not applied as of 2026-08-15**: this account's Service Control Policy
+doesn't yet allow the `ses` service, so `terraform apply` (and even `plan`,
+since SES calls happen at plan time too) would fail. `terraform validate`
+passes. Do not run `deploy.sh` until the SCP allow-list has been updated to
+include `ses` - see `ses.tf`'s own top comment for detail. That update is a
+human decision, not something Claude makes.
