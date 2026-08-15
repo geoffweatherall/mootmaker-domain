@@ -6,7 +6,7 @@
 # one apex redirect, shared by every environment of mootmaker-api and
 # mootmaker-webapp.
 # NOTE: `terraform apply -auto-approve` creates real AWS resources in whatever
-# account/credentials are active. Run this deliberately, not from automation.
+# account/credentials are active. 
 set -euo pipefail
 cd "$(dirname "$0")"
 
