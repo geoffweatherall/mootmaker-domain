@@ -84,10 +84,12 @@ testing pipeline described in
 [mootmaker/testing-strategy.md](https://github.com/geoffweatherall/mootmaker/blob/main/testing-strategy.md#reading-cognitos-emails-in-tests).
 The other half - the SES receipt rule, SNS topic, and SQS queue that
 actually consume the mail - lives in
-[mootmaker-e2e](https://github.com/geoffweatherall/mootmaker-e2e), which
-finds this identity via `data "aws_ses_domain_identity"` rather than reading
-any output from here, consistent with how mootmaker-api/mootmaker-webapp
-find this repo's hosted zone.
+[mootmaker-test-infra](https://github.com/geoffweatherall/mootmaker-test-infra)
+(shared test infrastructure used by every frontend, formerly `mootmaker-e2e`
+- see that repo's README for the 2026-08-19 rename), which finds this
+identity via `data "aws_ses_domain_identity"` rather than reading any output
+from here, consistent with how mootmaker-api/mootmaker-webapp find this
+repo's hosted zone.
 
 **Deployed and verified 2026-08-15**, once the account's Service Control
 Policy allow-list was updated to include `ses`: the domain identity's DNS

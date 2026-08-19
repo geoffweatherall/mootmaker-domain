@@ -1,26 +1,17 @@
-# PENDING - WRITTEN BUT NOT APPLIED (as of 2026-08-15).
+# Deployed and verified 2026-08-15, once the account's Service Control Policy allow-list
+# (mootmaker-bootstrap-aws-accounts/management-account/scp-guardrails.yaml) was updated to include
+# "ses" - domain identity DNS verification completed for real, so mail.mootmaker.com genuinely
+# receives mail. See mootmaker-domain/README.md and
+# mootmaker/testing-strategy.md#reading-cognitos-emails-in-tests for the full design.
 #
-# This project's account-wide Service Control Policy
-# (mootmaker-bootstrap-aws-accounts/management-account/scp-guardrails.yaml)
-# allows only an explicit list of AWS services, and "ses" isn't on it yet -
-# any SES API call (including the ones Terraform itself needs for `plan`,
-# not just `apply`) would be denied account-wide. This file is believed
-# correct (`terraform validate` passes) but has never been run against real
-# AWS. Do not `terraform apply` (or even `plan`) this until the SCP
-# allow-list is updated to include "ses" - that update is a human decision,
-# not something Claude makes. See mootmaker-domain/README.md and
-# mootmaker/testing-strategy.md#reading-cognitos-emails-in-tests for the
-# full design.
-#
-# Domain identity + DNS verification for mail.mootmaker.com, the subdomain
-# used for real-email testing in mootmaker-e2e (see that repo's
-# testing-strategy.md#reading-cognitos-emails-in-tests). This is the
-# "domain, shared and persistent" half of that design; the receipt
-# rule/SNS topic/SQS queue that actually consume the mail live in
-# mootmaker-e2e instead, referenced loosely via a `data` source rather than
-# a hard remote-state dependency - the same loose-coupling pattern
-# mootmaker-api/mootmaker-webapp already use to find this repo's hosted
-# zone (data "aws_route53_zone").
+# Domain identity + DNS verification for mail.mootmaker.com, the subdomain used for real-email
+# testing in mootmaker-test-infra (formerly mootmaker-e2e - see that repo's README for the
+# 2026-08-19 rename; testing-strategy.md#reading-cognitos-emails-in-tests for the design). This is
+# the "domain, shared and persistent" half of that design; the receipt rule/SNS topic/SQS queue
+# that actually consume the mail live in mootmaker-test-infra instead, referenced loosely via a
+# `data` source rather than a hard remote-state dependency - the same loose-coupling pattern
+# mootmaker-api/mootmaker-webapp already use to find this repo's hosted zone (data
+# "aws_route53_zone").
 #
 # "mail" was picked because nothing else in this zone uses it (checked via
 # `aws route53 list-resource-record-sets` against the live zone before
@@ -74,7 +65,7 @@ resource "aws_route53_record" "dkim" {
 }
 
 # Routes inbound mail for the subdomain to SES's regional inbound endpoint,
-# so SES can hand it off to the receipt rule set mootmaker-e2e owns. SES
+# so SES can hand it off to the receipt rule set mootmaker-test-infra owns. SES
 # inbound receiving is only available in a handful of regions; this project
 # (like every other mootmaker-* project) standardises on us-east-1 via
 # var.aws_region, which is one of them.
