@@ -73,7 +73,9 @@ domain would break. Prompts for interactive confirmation (no
 mootmaker-webapp find the zone via `data "aws_route53_zone" { name = "mootmaker.com." }`
 rather than reading these directly, so there's no cross-repo state coupling;
 the outputs exist mainly for visibility (`terraform output` after a deploy)
-and to get the nameserver values for your registrar.
+and to get the nameserver values for your registrar. A fourth output,
+`ses_mail_domain`, was added alongside `ses.tf` (see below) and is used by
+mootmaker-test-infra's real-email testing pipeline.
 
 ## Real-email testing infrastructure (`ses.tf`)
 
