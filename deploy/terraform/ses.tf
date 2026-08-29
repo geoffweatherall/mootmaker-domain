@@ -2,7 +2,7 @@
 # (mootmaker-bootstrap-aws-accounts/management-account/scp-guardrails.yaml) was updated to include
 # "ses" - domain identity DNS verification completed for real, so mail.mootmaker.com genuinely
 # receives mail. See mootmaker-domain/README.md and
-# mootmaker/testing-strategy.md#reading-cognitos-emails-in-tests for the full design.
+# mootmaker/docs/reference/testing-strategy.md#reading-cognitos-emails-in-tests for the full design.
 #
 # Domain identity + DNS verification for mail.mootmaker.com, the subdomain used for real-email
 # testing in mootmaker-test-infra (formerly mootmaker-e2e - see that repo's README for the
