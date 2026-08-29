@@ -83,7 +83,7 @@ mootmaker-test-infra's real-email testing pipeline.
 `mail.mootmaker.com` (verification TXT record, DKIM CNAMEs, and an MX record
 pointing at SES's regional inbound endpoint), the DNS half of the real-email
 testing pipeline described in
-[mootmaker/testing-strategy.md](https://github.com/geoffweatherall/mootmaker/blob/main/testing-strategy.md#reading-cognitos-emails-in-tests).
+[mootmaker/testing-strategy.md](https://github.com/geoffweatherall/mootmaker/blob/main/docs/reference/testing-strategy.md#reading-cognitos-emails-in-tests).
 The other half - the SES receipt rule, SNS topic, and SQS queue that
 actually consume the mail - lives in
 [mootmaker-test-infra](https://github.com/geoffweatherall/mootmaker-test-infra)
