@@ -5,10 +5,10 @@
 # mootmaker/docs/reference/testing-strategy.md#reading-cognitos-emails-in-tests for the full design.
 #
 # Domain identity + DNS verification for mail.mootmaker.com, the subdomain used for real-email
-# testing in mootmaker-test-infra (formerly mootmaker-e2e - see that repo's README for the
+# testing in mootmaker-email-testing (formerly mootmaker-e2e - see that repo's README for the
 # 2026-08-19 rename; testing-strategy.md#reading-cognitos-emails-in-tests for the design). This is
 # the "domain, shared and persistent" half of that design; the receipt rule/SNS topic/SQS queue
-# that actually consume the mail live in mootmaker-test-infra instead, referenced loosely via a
+# that actually consume the mail live in mootmaker-email-testing instead, referenced loosely via a
 # `data` source rather than a hard remote-state dependency - the same loose-coupling pattern
 # mootmaker-api/mootmaker-webapp already use to find this repo's hosted zone (data
 # "aws_route53_zone").
@@ -65,7 +65,7 @@ resource "aws_route53_record" "dkim" {
 }
 
 # Routes inbound mail for the subdomain to SES's regional inbound endpoint,
-# so SES can hand it off to the receipt rule set mootmaker-test-infra owns. SES
+# so SES can hand it off to the receipt rule set mootmaker-email-testing owns. SES
 # inbound receiving is only available in a handful of regions; this project
 # (like every other mootmaker-* project) standardises on us-east-1 via
 # var.aws_region, which is one of them.

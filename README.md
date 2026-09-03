@@ -75,7 +75,7 @@ rather than reading these directly, so there's no cross-repo state coupling;
 the outputs exist mainly for visibility (`terraform output` after a deploy)
 and to get the nameserver values for your registrar. A fourth output,
 `ses_mail_domain`, was added alongside `ses.tf` (see below) and is used by
-mootmaker-test-infra's real-email testing pipeline.
+mootmaker-email-testing's real-email testing pipeline.
 
 ## Real-email testing infrastructure (`ses.tf`)
 
@@ -86,7 +86,7 @@ testing pipeline described in
 [mootmaker/testing-strategy.md](https://github.com/geoffweatherall/mootmaker/blob/main/docs/reference/testing-strategy.md#reading-cognitos-emails-in-tests).
 The other half - the SES receipt rule, SNS topic, and SQS queue that
 actually consume the mail - lives in
-[mootmaker-test-infra](https://github.com/geoffweatherall/mootmaker-test-infra)
+[mootmaker-email-testing](https://github.com/geoffweatherall/mootmaker-email-testing)
 (shared test infrastructure used by every frontend, formerly `mootmaker-e2e`
 - see that repo's README for the 2026-08-19 rename), which finds this
 identity via `data "aws_ses_domain_identity"` rather than reading any output
