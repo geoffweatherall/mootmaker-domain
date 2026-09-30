@@ -12,8 +12,10 @@ exactly one hosted zone and one apex redirect, shared by every environment of
 - An `aws_route53_zone` for `mootmaker.com`.
 - An ACM certificate for the bare apex only (`mootmaker.com`), DNS-validated
   against that zone. `www.mootmaker.com` and every environment's
-  `api.<env>.mootmaker.com`/`www.<env>.mootmaker.com` get their own
-  certificate from mootmaker-api/mootmaker-webapp's own Terraform instead -
+  `api.<env>.mootmaker.com`/`avatars.<env>.mootmaker.com`/`www.<env>.mootmaker.com`
+  get their own certificate from mootmaker-api/mootmaker-webapp's own
+  Terraform instead (`api.` and `avatars.` from mootmaker-api, `www.` from
+  mootmaker-webapp; production drops the `<env>` segment) -
   see "Why not one shared wildcard certificate?" below.
 - A CloudFront distribution aliased to `mootmaker.com`, with a CloudFront
   Function that 301-redirects every request to the same path/query on
