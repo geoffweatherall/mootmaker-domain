@@ -2,8 +2,8 @@ resource "aws_route53_zone" "this" {
   name = "mootmaker.com"
 }
 
-# Query logging, to find out what drives the zone's billed DNS queries: the daily count grew from
-# ~3k in August 2026 to 30-40k by late September, even on days nothing was tested. Route 53 only
+# Query logging, to see what drives the zone's billed DNS queries, which arrive even on days nothing
+# is tested (mostly scanners; see the cost overview in the hub). Route 53 only
 # delivers query logs to CloudWatch Logs in us-east-1, under a group it is allowed to write to.
 # At that volume this is a few MB a day - cents a month - and the short retention caps storage.
 resource "aws_cloudwatch_log_group" "dns_queries" {

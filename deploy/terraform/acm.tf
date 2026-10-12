@@ -1,7 +1,7 @@
 # Only the bare apex - www.mootmaker.com and every api.*/www.* environment
 # hostname get their own certificate from mootmaker-api/mootmaker-webapp's
-# own Terraform, validated against the zone this project creates. See each
-# project's domain.tf for why a single wildcard can't cover them instead.
+# own Terraform, validated against the zone this project creates. See README.md
+# for why a single wildcard can't cover them instead.
 resource "aws_acm_certificate" "apex" {
   provider          = aws.us_east_1
   domain_name       = "mootmaker.com"
