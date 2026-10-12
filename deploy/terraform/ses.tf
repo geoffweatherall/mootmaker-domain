@@ -1,23 +1,9 @@
-# Deployed and verified 2026-08-15, once the account's Service Control Policy allow-list
-# (mootmaker-bootstrap-aws-accounts/management-account/scp-guardrails.yaml) was updated to include
-# "ses" - domain identity DNS verification completed for real, so mail.mootmaker.com genuinely
-# receives mail. See mootmaker-domain/README.md and
-# mootmaker/docs/reference/testing-strategy.md#reading-cognitos-emails-in-tests for the full design.
-#
-# Domain identity + DNS verification for mail.mootmaker.com, the subdomain used for real-email
-# testing in mootmaker-email-testing (formerly mootmaker-e2e - see that repo's README for the
-# 2026-08-19 rename; testing-strategy.md#reading-cognitos-emails-in-tests for the design). This is
-# the "domain, shared and persistent" half of that design; the receipt rule/SNS topic/SQS queue
-# that actually consume the mail live in mootmaker-email-testing instead, referenced loosely via a
-# `data` source rather than a hard remote-state dependency - the same loose-coupling pattern
-# mootmaker-api/mootmaker-webapp already use to find this repo's hosted zone (data
-# "aws_route53_zone").
-#
-# "mail" was picked because nothing else in this zone uses it (checked via
-# `aws route53 list-resource-record-sets` against the live zone before
-# writing this) and it reads clearly as "the subdomain mail comes from",
-# distinct from api.<env>/www.<env> which are per-environment application
-# hostnames.
+# Domain identity + DNS verification for mail.mootmaker.com. Every environment's Cognito user pool
+# sends from noreply@mail.mootmaker.com (mootmaker-api's cognito.tf), and the MX record below
+# delivers inbound test mail to the receipt rule, SNS topic and SQS queue in mootmaker-email-testing.
+# Both find this identity with a `data "aws_ses_domain_identity"` source rather than reading this
+# repository's state, the same loose coupling they use for the hosted zone. The account's Service
+# Control Policy allow-list (mootmaker-bootstrap-aws-accounts) must include ses.
 locals {
   ses_mail_domain = "mail.${aws_route53_zone.this.name}"
 }
@@ -47,10 +33,8 @@ resource "aws_ses_domain_identity_verification" "mail" {
 }
 
 # DKIM signing - three CNAME records SES uses to publish DKIM keys for this
-# domain. Not strictly required for SES to *receive* mail (this domain's
-# only use is inbound testing traffic, not sending), but enabling it costs
-# nothing and keeps this identity fully verified/healthy rather than
-# partially configured.
+# domain. Cognito's account emails are sent from this domain, and DKIM is
+# what lets receiving mail servers trust them rather than treat them as spam.
 resource "aws_ses_domain_dkim" "mail" {
   domain = aws_ses_domain_identity.mail.domain
 }

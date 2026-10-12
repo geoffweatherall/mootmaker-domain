@@ -1,102 +1,61 @@
 # mootmaker-domain
 
-Creates the `mootmaker.com` Route53 hosted zone and redirects the bare apex
-(`mootmaker.com`) to `https://www.mootmaker.com`. Unlike every other
-`mootmaker-*` project, this one takes **no environment argument** - there is
-exactly one hosted zone and one apex redirect, shared by every environment of
-[mootmaker-api](https://github.com/geoffweatherall/mootmaker-api) and
-[mootmaker-webapp](https://github.com/geoffweatherall/mootmaker-webapp).
+Everything about `mootmaker.com` that every environment shares: the Route 53 hosted zone and its query
+logging, the redirect from the bare `mootmaker.com` to `www.mootmaker.com`, and the SES identity for
+`mail.mootmaker.com`, which sends every environment's account email and receives test mail. It takes
+**no environment argument**: there is one deployment, and every environment depends on it.
+
+```mermaid
+flowchart TB
+  porkbun["Registrar: Porkbun<br/>delegates to Route 53"]
+  zone["Route 53 zone mootmaker.com<br/>queries logged for 14 days"]
+  apex["mootmaker.com<br/>CloudFront function: 301 to www"]
+  mail["mail.mootmaker.com<br/>SES identity, DKIM, MX"]
+  envs["Each environment's own records and certificates<br/>www.&lt;env&gt;, api.&lt;env&gt;, avatars.&lt;env&gt;<br/>(no &lt;env&gt; for production)"]
+  porkbun --> zone
+  zone --> apex
+  zone --> mail
+  zone --> envs
+```
 
 ## What it creates
 
-- An `aws_route53_zone` for `mootmaker.com`.
-- An ACM certificate for the bare apex only (`mootmaker.com`), DNS-validated
-  against that zone. `www.mootmaker.com` and every environment's
-  `api.<env>.mootmaker.com`/`avatars.<env>.mootmaker.com`/`www.<env>.mootmaker.com`
-  get their own certificate from mootmaker-api/mootmaker-webapp's own
-  Terraform instead (`api.` and `avatars.` from mootmaker-api, `www.` from
-  mootmaker-webapp; production drops the `<env>` segment) -
-  see "Why not one shared wildcard certificate?" below.
-- A CloudFront distribution aliased to `mootmaker.com`, with a CloudFront
-  Function that 301-redirects every request to the same path/query on
-  `https://www.mootmaker.com`, **before any origin fetch happens** - the
-  distribution's origin is a minimal S3 bucket that's never actually read
-  from, so this redirect doesn't depend on `www.mootmaker.com` (or anything
-  else) actually being deployed and working.
-- A/AAAA alias records pointing `mootmaker.com` at that distribution.
-- An SES domain identity for `mail.mootmaker.com` (see "Real-email testing
-  infrastructure" below), its DNS verification/DKIM records, and an MX
-  record pointing at SES's inbound endpoint.
+| Resource | Purpose |
+|---|---|
+| Route 53 hosted zone `mootmaker.com` | Every hostname in the project. Other repositories find it with `data "aws_route53_zone"`, not by reading this repository's state |
+| DNS query logging | Every query against the zone goes to the CloudWatch log group `/aws/route53/mootmaker.com` in us-east-1, kept for 14 days. It shows what drives the zone's billed queries, mostly scanners |
+| ACM certificate for `mootmaker.com` | DNS-validated against the zone. Used only by the apex redirect |
+| CloudFront distribution for `mootmaker.com` | A CloudFront function 301-redirects every request to the same path and query on `https://www.mootmaker.com` before any origin is read, so it works even if `www` is down. Its S3 origin is never read |
+| A and AAAA alias records | Point `mootmaker.com` at that distribution |
+| SES domain identity `mail.mootmaker.com` | Verified by TXT record, with DKIM. Each environment's Cognito user pool sends from `noreply@mail.mootmaker.com` |
+| MX record for `mail.mootmaker.com` | Delivers inbound mail to SES in us-east-1, where mootmaker-email-testing's receipt rule picks it up |
 
-## Why not one shared wildcard certificate?
+**No shared wildcard certificate.** A wildcard covers one level only, so `*.mootmaker.com` cannot cover
+`www.test.mootmaker.com`. Each environment creates and validates its own certificates against this zone:
+mootmaker-api for `api.` and `avatars.`, mootmaker-webapp for `www.`. They are free, and every environment
+stays self-contained.
 
-ACM/CloudFront wildcards only match one subdomain level: `*.mootmaker.com`
-matches `test.mootmaker.com`, but not `www.test.mootmaker.com` (two levels
-deep). Since environment names for mootmaker-api/mootmaker-webapp are
-arbitrary strings chosen at deploy time (`test`, a developer's own sandbox,
-etc. - see the [mootmaker project README](https://github.com/geoffweatherall/mootmaker#multi-environment-deployments)),
-no certificate created here in advance could cover them all. Each
-environment provisions and DNS-validates its own certificate for exactly its
-own hostname instead, against the zone this project creates - free (ACM
-certificates are free when attached to CloudFront/AppSync), and keeps every
-environment fully self-contained, consistent with how loosely these projects
-are already coupled.
+How DNS, mail and the accounts fit together: the hub's
+[AWS accounts overview](https://github.com/geoffweatherall/mootmaker/blob/main/docs/overview/aws-accounts.md).
+What the zone and its queries cost: the
+[cost overview](https://github.com/geoffweatherall/mootmaker/blob/main/docs/overview/cost-and-scale-to-zero.md).
 
 ## Deploying
 
 ```bash
-./deploy.sh
+./deploy.sh      # no arguments; prints the nameservers at the end
+./undeploy.sh    # takes down DNS and mail for every environment; prompts first
 ```
 
-No arguments. Creates everything above, then prints the nameservers to
-configure at your registrar.
+A change here affects production and every other environment at once, and there is no copy to try it on.
+Run `terraform plan` (after `terraform -chdir=deploy/terraform init -backend-config=backend.hcl`) and
+read it before deploying.
 
-**After deploying for the first time**, configure those nameservers at your
-registrar (Porkbun) and wait for delegation to propagate before deploying
-mootmaker-api or mootmaker-webapp - their certificates are DNS-validated
-against this zone's *authoritative* nameservers, so validation will hang
-until Porkbun's delegation to Route53 has actually taken effect (usually
-well under an hour, but not instant).
-
-## Undeploying
-
-```bash
-./undeploy.sh
-```
-
-**This takes down mootmaker.com's DNS entirely** - every
-mootmaker-api/mootmaker-webapp environment still using a hostname under this
-domain would break. Prompts for interactive confirmation (no
-`-auto-approve`).
+**Rebuilding the zone from nothing** gives it new nameservers. Set them at Porkbun, and wait for
+delegation before deploying any environment: their certificates validate against this zone's
+authoritative nameservers and hang until delegation has taken effect.
 
 ## Outputs
 
-`hosted_zone_id`, `hosted_zone_name`, and `name_servers` - mootmaker-api and
-mootmaker-webapp find the zone via `data "aws_route53_zone" { name = "mootmaker.com." }`
-rather than reading these directly, so there's no cross-repo state coupling;
-the outputs exist mainly for visibility (`terraform output` after a deploy)
-and to get the nameserver values for your registrar. A fourth output,
-`ses_mail_domain`, was added alongside `ses.tf` (see below) and is used by
-mootmaker-email-testing's real-email testing pipeline.
-
-## Real-email testing infrastructure (`ses.tf`)
-
-`deploy/terraform/ses.tf` creates an SES domain identity for
-`mail.mootmaker.com` (verification TXT record, DKIM CNAMEs, and an MX record
-pointing at SES's regional inbound endpoint), the DNS half of the real-email
-testing pipeline described in
-[mootmaker/testing-strategy.md](https://github.com/geoffweatherall/mootmaker/blob/main/docs/reference/testing-strategy.md#reading-cognitos-emails-in-tests).
-The other half - the SES receipt rule, SNS topic, and SQS queue that
-actually consume the mail - lives in
-[mootmaker-email-testing](https://github.com/geoffweatherall/mootmaker-email-testing)
-(shared test infrastructure used by every frontend, formerly `mootmaker-e2e`
-- see that repo's README for the 2026-08-19 rename), which finds this
-identity via `data "aws_ses_domain_identity"` rather than reading any output
-from here, consistent with how mootmaker-api/mootmaker-webapp find this
-repo's hosted zone.
-
-**Deployed and verified 2026-08-15**, once the account's Service Control
-Policy allow-list was updated to include `ses`: the domain identity's DNS
-verification completed for real (Terraform blocked on and confirmed SES
-actually observed the TXT record), so `mail.mootmaker.com` genuinely
-receives mail now.
+`hosted_zone_id`, `hosted_zone_name`, `name_servers` (for the registrar) and `ses_mail_domain`. No other
+repository reads them; they are for `terraform output` after a deploy.
